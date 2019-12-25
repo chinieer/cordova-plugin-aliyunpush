@@ -30,24 +30,13 @@
                                              selector:@selector(onMessageReceived:)
                                                  name:@"AliyunNotificationMessage"
                                                object:nil];
-    
+    /*
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [self requireNotifyPermission:nil];
-    });
+    });*/
 }
 
 
-/**
-  弹出通知请求
- */
-- (void)requireNotifyPermission:(NSString *)msg{
- 
-    self.alertmsg = msg?msg:@"建议你开启通知权限，第一时间收到提醒";
-    
-    if(![self judgeOneDate]){
-        [self isUserNotificationEnable];
-    }
-}
 
 
 - (void)showNotifyAlert:(NSString *) message{
@@ -92,30 +81,42 @@
     __block BOOL isEnable = NO;
     __weak AliyunPush *weakSelf = self;
     if ([[UIDevice currentDevice].systemVersion floatValue] >= 10.0f) { // iOS版本 >=10.0 处理逻辑
-        
+        dispatch_semaphore_t sem;
+        sem = dispatch_semaphore_create(0);
         [[UNUserNotificationCenter currentNotificationCenter]getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
+            
             if (settings.authorizationStatus == UNAuthorizationStatusDenied) {
                 isEnable = NO;
                
                 //拒绝调用 且今天没调用过
+                /*
                 NSInteger x =( arc4random() % 11) ;
                 if(x%3 == 0){
                     [weakSelf showNotifyAlert:self.alertmsg];
                 }
+                */
+                //防止占用主线程
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [weakSelf showNotifyAlert:self.alertmsg];
+                });
                 
             }else if (settings.authorizationStatus == UNAuthorizationStatusAuthorized) {
                 isEnable = YES;
             }
+            dispatch_semaphore_signal(sem);
         }];
-        
-    } else { // iOS版本 <8.0 处理逻辑
+        dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);//获取通知设置的过程是异步的，这里需要等待
+    } else { // iOS版本 <10.0 处理逻辑
         if ([[UIApplication sharedApplication] currentUserNotificationSettings].types  == UIRemoteNotificationTypeNone) {
              isEnable = NO;
             //拒绝调用 且今天没调用过
+            /*
             NSInteger x =( arc4random() % 11) ;
             if(x%3 == 0){
                 [weakSelf showNotifyAlert:self.alertmsg];
             }
+            */
+            [weakSelf showNotifyAlert:self.alertmsg];
         }else {
             isEnable = YES;
         }
@@ -238,6 +239,32 @@
     
     [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
 }
+/**
+  弹出通知请求
+ */
+- (void)requireNotifyPermission:(CDVInvokedUrlCommand*)command{
+     NSString* msg = [command.arguments objectAtIndex:0];
+    
+    self.alertmsg = msg?msg:@"请开启推送服务以便接收通知";
+ 
+    /*
+    if(![self judgeOneDate]){
+        [self isUserNotificationEnable];
+    }
+    */
+     
+    CDVPluginResult *cdvresult;
+  
+    if([self isUserNotificationEnable]){
+        NSLog(@"已启动推送");
+        cdvresult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    }else{
+        NSLog(@"未启动推送");
+        cdvresult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR  messageAsString:@"no push permission"];
+    }
+    [self.commandDelegate sendPluginResult:cdvresult callbackId:command.callbackId];
+}
+
 
 /**
  * 阿里云推送绑定账号名
