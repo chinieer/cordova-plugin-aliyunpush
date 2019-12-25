@@ -32,7 +32,7 @@
                                                object:nil];
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self requireNotifyPermisssion:nil];
+        [self requireNotifyPermission:nil];
     });
 }
 
@@ -40,7 +40,7 @@
 /**
   弹出通知请求
  */
-- (void)requireNotifyPermisssion:(NSString *)msg{
+- (void)requireNotifyPermission:(NSString *)msg{
  
     self.alertmsg = msg?msg:@"建议你开启通知权限，第一时间收到提醒";
     

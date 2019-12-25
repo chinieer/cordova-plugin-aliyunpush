@@ -33,7 +33,7 @@
 /**
  * 阿里云推送
  */
-- (void)requireNotifyPermisssion:(NSString *)msg;
+- (void)requireNotifyPermission:(NSString *)msg;
 
 /**
  *绑定标签
